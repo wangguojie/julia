@@ -1653,6 +1653,7 @@ end
 
 # build (and start inferring) the inference frame for the linfo
 function typeinf_frame(linfo::MethodInstance, optimize::Bool, cached::Bool, world::UInt, caller)
+    # println(world, ' ', linfo)
     frame = nothing
     if cached && linfo.inInference
         # inference on this signature may be in progress,
