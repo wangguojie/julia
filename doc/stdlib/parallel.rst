@@ -117,10 +117,14 @@ Tasks
 
    Constructs a ``Channel`` that can hold a maximum of ``sz`` objects of type ``T``\ . ``put!`` calls on a full channel block till an object is removed with ``take!``\ .
 
+   ``Channel(0)`` constructs a Channel without a backing store. Consequently a ``put!`` on a 0-sized channel will block till another task calls a ``take!`` on it. And vice-versa.
+
+   ``isready`` on a 0-sized channel returns true if there are any tasks blocked on a ``put!`` ``fetch`` is unsupported on a 0-sized channel.
+
    Other constructors:
 
-   * ``Channel()`` - equivalent to ``Channel{Any}(32)``
-   * ``Channel(sz::Int)`` equivalent to ``Channel{Any}(sz)``
+   * ``Channel(Inf)`` - equivalent to ``Channel{Any}(typemax(UInt))``
+   * ``Channel(sz)`` equivalent to ``Channel{Any}(sz)``
 
 General Parallel Computing Support
 ----------------------------------
@@ -384,7 +388,11 @@ General Parallel Computing Support
 
    .. Docstring generated from Julia source
 
-   Determine whether a ``Channel`` has a value stored to it. ``isready`` on ``Channel``\ s is non-blocking.
+   Determine whether a ``Channel`` has a value stored to it.
+
+   For 0-sized channels returns true if there are tasks waiting on a ``put!``
+
+   ``isready`` on ``Channel``\ s is non-blocking.
 
 .. function:: isready(rr::RemoteChannel, args...)
 
