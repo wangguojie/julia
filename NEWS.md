@@ -49,6 +49,10 @@ Library improvements
 
   * `max`, `min`, and related functions (`minmax`, `maximum`, `minimum`, `extrema`) now return `NaN` for `NaN` arguments ([#12563]).
 
+  * Iteration utilities that wrap iterators and return other iterators (`enumerate`, `zip`, `rest`,
+    `countfrom`, `take`, `drop`, `cycle`, `repeated`, `product`, `flatten`, `partition`) have been
+    moved to the module `Base.Iterators` ([#18839]).
+
 Compiler/Runtime improvements
 -----------------------------
 
