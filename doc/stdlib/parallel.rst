@@ -115,16 +115,53 @@ Tasks
 
    .. Docstring generated from Julia source
 
-   Constructs a ``Channel`` that can hold a maximum of ``sz`` objects of type ``T``\ . ``put!`` calls on a full channel block till an object is removed with ``take!``\ .
+   Constructs a ``Channel`` with an internal buffer that can hold a maximum of ``sz`` objects of type ``T``\ . ``put!`` calls on a full channel block till an object is removed with ``take!``\ .
 
-   ``Channel(0)`` constructs a Channel without a backing store. Consequently a ``put!`` on a 0-sized channel will block till another task calls a ``take!`` on it. And vice-versa.
-
-   ``isready`` on a 0-sized channel returns true if there are any tasks blocked on a ``put!`` ``fetch`` is unsupported on a 0-sized channel.
+   ``Channel(0)`` constructs an unbuffered channel. ``put!`` blocks till a matching ``take!`` is called. And vice-versa.
 
    Other constructors:
 
    * ``Channel(Inf)`` - equivalent to ``Channel{Any}(typemax(UInt))``
    * ``Channel(sz)`` equivalent to ``Channel{Any}(sz)``
+
+.. function:: put!(c::Channel, v)
+
+   .. Docstring generated from Julia source
+
+   Appends an item ``v`` to the channel ``c``\ . Blocks if the channel is full.
+
+   For unbuffered channels, blocks until a ``take!`` is performed by a different task.
+
+.. function:: take!(c::Channel)
+
+   .. Docstring generated from Julia source
+
+   Removes and returns a value from a ``Channel``\ . Blocks till data is available.
+
+   For unbuffered channels, blocks until a ``put!`` is performed by a different task.
+
+.. function:: isready(c::Channel)
+
+   .. Docstring generated from Julia source
+
+   Determine whether a ``Channel`` has a value stored to it. Returns immediately, does not block.
+
+   For unbuffered channels returns ``true`` if there are tasks waiting on a ``put!``\ .
+
+.. function:: fetch(c::Channel)
+
+   .. Docstring generated from Julia source
+
+   Waits for and gets the first available item from the channel. Does not remove the item. ``fetch`` is unsupported on an unbuffered (0-size) channel.
+
+.. function:: close(c::Channel)
+
+   .. Docstring generated from Julia source
+
+   Closes a channel. An exception is thrown by:
+
+   * ``put!`` on a closed channel.
+   * ``take!`` and ``fetch`` on an empty, closed channel.
 
 General Parallel Computing Support
 ----------------------------------
@@ -340,7 +377,6 @@ General Parallel Computing Support
 
    * ``Future``\ : Wait for and get the value of a Future. The fetched value is cached locally. Further calls to ``fetch`` on the same reference return the cached value. If the remote value is an exception, throws a ``RemoteException`` which captures the remote exception and backtrace.
    * ``RemoteChannel``\ : Wait for and get the value of a remote reference. Exceptions raised are same as for a ``Future`` .
-   * ``Channel`` : Wait for and get the first available item from the channel.
 
 .. function:: remotecall_wait(f, id::Integer, args...; kwargs...)
 
@@ -366,33 +402,11 @@ General Parallel Computing Support
 
    Store a value to a ``Future`` ``rr``\ . ``Future``\ s are write-once remote references. A ``put!`` on an already set ``Future`` throws an ``Exception``\ . All asynchronous remote calls return ``Future``\ s and set the value to the return value of the call upon completion.
 
-.. function:: put!(c::Channel, v)
-
-   .. Docstring generated from Julia source
-
-   Appends an item ``v`` to the channel ``c``\ . Blocks if the channel is full.
-
 .. function:: take!(rr::RemoteChannel, args...)
 
    .. Docstring generated from Julia source
 
    Fetch value(s) from a remote channel, removing the value(s) in the processs.
-
-.. function:: take!(c::Channel)
-
-   .. Docstring generated from Julia source
-
-   Removes and returns a value from a ``Channel``\ . Blocks till data is available.
-
-.. function:: isready(c::Channel)
-
-   .. Docstring generated from Julia source
-
-   Determine whether a ``Channel`` has a value stored to it.
-
-   For 0-sized channels returns true if there are tasks waiting on a ``put!``
-
-   ``isready`` on ``Channel``\ s is non-blocking.
 
 .. function:: isready(rr::RemoteChannel, args...)
 
@@ -413,15 +427,6 @@ General Parallel Computing Support
        c = Channel(1)
        @async put!(c, remotecall_fetch(long_computation, p))
        isready(c)  # will not block
-
-.. function:: close(c::Channel)
-
-   .. Docstring generated from Julia source
-
-   Closes a channel. An exception is thrown by:
-
-   * ``put!`` on a closed channel.
-   * ``take!`` and ``fetch`` on an empty, closed channel.
 
 .. function:: WorkerPool(workers)
 

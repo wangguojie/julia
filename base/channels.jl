@@ -10,7 +10,7 @@ type Channel{T} <: AbstractChannel
     data::Array{T,1}
     sz_max::UInt            # maximum size of channel
 
-    # Used when sz_max == 0
+    # Used when sz_max == 0, i.e., an unbuffered channel.
     takers::Array{Condition}
 
     function Channel(sz::Float64)
@@ -31,6 +31,10 @@ end
 Channel(sz) = Channel{Any}(sz)
 
 closed_exception() = InvalidStateException("Channel is closed.", :closed)
+
+const UNBUFFERED_CHANNEL = Type{Val{false}}
+const BUFFERED_CHANNEL = Type{Val{true}}
+isbuffered(c::Channel) = c.sz_max==0 ? Val{false} : Val{true}
 
 """
     close(c::Channel)
@@ -56,13 +60,16 @@ end
     put!(c::Channel, v)
 
 Appends an item `v` to the channel `c`. Blocks if the channel is full.
+
+For unbuffered channels, blocks until a `take!` is performed by a different
+task.
 """
 function put!(c::Channel, v)
     !isopen(c) && throw(closed_exception())
-    put!(c,v,Val{c.sz_max==0})
+    put!(c,v,isbuffered(c))
 end
 
-function put!(c::Channel, v, ::Type{Val{false}})
+function put!(c::Channel, v, ::BUFFERED_CHANNEL)
     while length(c.data) == c.sz_max
         wait(c.cond_put)
     end
@@ -72,7 +79,7 @@ function put!(c::Channel, v, ::Type{Val{false}})
 end
 
 # 0-sized channel
-function put!(c::Channel, v, ::Type{Val{true}})
+function put!(c::Channel, v, ::UNBUFFERED_CHANNEL)
     while length(c.takers) == 0
         notify(c.cond_take, nothing, true, false)  # Required to handle wait() on 0-sized channels
         wait(c.cond_put)
@@ -84,21 +91,30 @@ end
 
 push!(c::Channel, v) = put!(c, v)
 
-fetch(c::Channel) = fetch(c, Val{c.sz_max==0})
-function fetch(c::Channel, ::Type{Val{false}})
+"""
+    fetch(c::Channel)
+
+Waits for and gets the first available item from the channel. Does not
+remove the item. `fetch` is unsupported on an unbuffered (0-size) channel.
+"""
+fetch(c::Channel) = fetch(c, isbuffered(c))
+function fetch(c::Channel, ::BUFFERED_CHANNEL)
     wait(c)
     c.data[1]
 end
-fetch(c::Channel, ::Type{Val{true}}) = throw(ErrorException("`fetch` on a 0-sized Channel is not supported."))
+fetch(c::Channel, ::UNBUFFERED_CHANNEL) = throw(ErrorException("`fetch` is not supported on an unbuffered Channel."))
 
 
 """
     take!(c::Channel)
 
 Removes and returns a value from a `Channel`. Blocks till data is available.
+
+For unbuffered channels, blocks until a `put!` is performed by a different
+task.
 """
-take!(c::Channel) = take!(c, Val{c.sz_max==0})
-function take!(c::Channel, ::Type{Val{false}})
+take!(c::Channel) = take!(c, isbuffered(c))
+function take!(c::Channel, ::BUFFERED_CHANNEL)
     wait(c)
     v = shift!(c.data)
     notify(c.cond_put, nothing, false, false) # notify only one, since only one slot has become available for a put!.
@@ -108,7 +124,7 @@ end
 shift!(c::Channel) = take!(c)
 
 # 0-size channel
-function take!(c::Channel, ::Type{Val{true}})
+function take!(c::Channel, ::UNBUFFERED_CHANNEL)
     !isopen(c) && throw(closed_exception())
     cond_taker = Condition()
     push!(c.takers, cond_taker)
@@ -128,16 +144,15 @@ end
 """
     isready(c::Channel)
 
-Determine whether a `Channel` has a value stored to it.
+Determine whether a `Channel` has a value stored to it. Returns
+immediately, does not block.
 
-For 0-sized channels returns true if there are tasks waiting
-on a `put!`
-
-`isready` on `Channel`s is non-blocking.
+For unbuffered channels returns `true` if there are tasks waiting
+on a `put!`.
 """
-isready(c::Channel) = n_avail(c, Val{c.sz_max==0}) > 0
-n_avail(c::Channel, ::Type{Val{false}}) = length(c.data)
-n_avail(c::Channel, ::Type{Val{true}}) = n_waiters(c.cond_put)
+isready(c::Channel) = n_avail(c, isbuffered(c)) > 0
+n_avail(c::Channel, ::BUFFERED_CHANNEL) = length(c.data)
+n_avail(c::Channel, ::UNBUFFERED_CHANNEL) = n_waiters(c.cond_put)
 
 function wait(c::Channel)
     while !isready(c)
@@ -155,7 +170,7 @@ end
 
 eltype{T}(::Type{Channel{T}}) = T
 
-show(io::IO, c::Channel) = print(io, "$(typeof(c))(sz_max:$(c.sz_max),sz_curr:$(n_avail(c, Val{c.sz_max==0})))")
+show(io::IO, c::Channel) = print(io, "$(typeof(c))(sz_max:$(c.sz_max),sz_curr:$(n_avail(c, isbuffered(c))))")
 
 start{T}(c::Channel{T}) = Ref{Nullable{T}}()
 function done(c::Channel, state::Ref)

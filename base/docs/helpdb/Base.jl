@@ -1434,14 +1434,11 @@ endof
 """
     Channel{T}(sz::Int)
 
-Constructs a `Channel` that can hold a maximum of `sz` objects of type `T`. `put!` calls on
-a full channel block till an object is removed with `take!`.
+Constructs a `Channel` with an internal buffer that can hold a maximum of `sz` objects
+of type `T`. `put!` calls on a full channel block till an object is removed with `take!`.
 
-`Channel(0)` constructs a Channel without a backing store. Consequently a `put!` on a
-0-sized channel will block till another task calls a `take!` on it. And vice-versa.
-
-`isready` on a 0-sized channel returns true if there are any tasks blocked on a `put!`
-`fetch` is unsupported on a 0-sized channel.
+`Channel(0)` constructs an unbuffered channel. `put!` blocks till a matching `take!` is called.
+And vice-versa.
 
 Other constructors:
 
