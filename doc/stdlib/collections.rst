@@ -538,7 +538,9 @@ Iterable Collections
 
    .. Docstring generated from Julia source
 
-   Returns the index of the maximum element in a collection. The collection must not be empty.
+   Returns the index of the maximum element in a collection. If there are multiple maximal elements, then the first one will be returned. ``NaN`` values are ignored, unless all elements are ``NaN``\ .
+
+   The collection must not be empty.
 
    .. doctest::
 
@@ -549,7 +551,9 @@ Iterable Collections
 
    .. Docstring generated from Julia source
 
-   Returns the index of the minimum element in a collection. The collection must not be empty.
+   Returns the index of the minimum element in a collection. If there are multiple minimal elements, then the first one will be returned. ``NaN`` values are ignored, unless all elements are ``NaN``\ .
+
+   The collection must not be empty.
 
    .. doctest::
 
@@ -560,7 +564,9 @@ Iterable Collections
 
    .. Docstring generated from Julia source
 
-   Returns the maximum element and its index. The collection must not be empty.
+   Returns the maximum element of the collection ``itr`` and its index. If there are multiple maximal elements, then the first one will be returned. ``NaN`` values are ignored, unless all elements are ``NaN``\ .
+
+   The collection must not be empty.
 
    .. doctest::
 
@@ -577,7 +583,9 @@ Iterable Collections
 
    .. Docstring generated from Julia source
 
-   Returns the minimum element and its index. The collection must not be empty.
+   Returns the minimum element of the collection ``itr`` and its index. If there are multiple minimal elements, then the first one will be returned. ``NaN`` values are ignored, unless all elements are ``NaN``\ .
+
+   The collection must not be empty.
 
    .. doctest::
 

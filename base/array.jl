@@ -1413,7 +1413,10 @@ end
 """
     findmax(itr) -> (x, index)
 
-Returns the maximum element and its index.
+Returns the maximum element of the collection `itr` and its index. If there are multiple
+maximal elements, then the first one will be returned. `NaN` values are ignored, unless
+all elements are `NaN`.
+
 The collection must not be empty.
 
 ```jldoctest
@@ -1442,7 +1445,10 @@ end
 """
     findmin(itr) -> (x, index)
 
-Returns the minimum element and its index.
+Returns the minimum element of the collection `itr` and its index. If there are multiple
+minimal elements, then the first one will be returned. `NaN` values are ignored, unless
+all elements are `NaN`.
+
 The collection must not be empty.
 
 ```jldoctest
@@ -1471,7 +1477,10 @@ end
 """
     indmax(itr) -> Integer
 
-Returns the index of the maximum element in a collection.
+Returns the index of the maximum element in a collection. If there are multiple maximal
+elements, then the first one will be returned. `NaN` values are ignored, unless all
+elements are `NaN`.
+
 The collection must not be empty.
 
 ```jldoctest
@@ -1484,7 +1493,10 @@ indmax(a) = findmax(a)[2]
 """
     indmin(itr) -> Integer
 
-Returns the index of the minimum element in a collection.
+Returns the index of the minimum element in a collection. If there are multiple minimal
+elements, then the first one will be returned. `NaN` values are ignored, unless all
+elements are `NaN`.
+
 The collection must not be empty.
 
 ```jldoctest
