@@ -105,7 +105,7 @@ fetch_unbuffered(c::Channel) = throw(ErrorException("`fetch` is not supported on
 """
     take!(c::Channel)
 
-Removes and returns a value from a `Channel`. Blocks till data is available.
+Removes and returns a value from a `Channel`. Blocks until data is available.
 
 For unbuffered channels, blocks until a `put!` is performed by a different
 task.

@@ -115,13 +115,13 @@ Tasks
 
    .. Docstring generated from Julia source
 
-   Constructs a ``Channel`` with an internal buffer that can hold a maximum of ``sz`` objects of type ``T``\ . ``put!`` calls on a full channel block till an object is removed with ``take!``\ .
+   Constructs a ``Channel`` with an internal buffer that can hold a maximum of ``sz`` objects of type ``T``\ . ``put!`` calls on a full channel block until an object is removed with ``take!``\ .
 
-   ``Channel(0)`` constructs an unbuffered channel. ``put!`` blocks till a matching ``take!`` is called. And vice-versa.
+   ``Channel(0)`` constructs an unbuffered channel. ``put!`` blocks until a matching ``take!`` is called. And vice-versa.
 
    Other constructors:
 
-   * ``Channel(Inf)`` - equivalent to ``Channel{Any}(typemax(UInt))``
+   * ``Channel(Inf)`` - equivalent to ``Channel{Any}(typemax(Int))``
    * ``Channel(sz)`` equivalent to ``Channel{Any}(sz)``
 
 .. function:: put!(c::Channel, v)
@@ -136,7 +136,7 @@ Tasks
 
    .. Docstring generated from Julia source
 
-   Removes and returns a value from a ``Channel``\ . Blocks till data is available.
+   Removes and returns a value from a ``Channel``\ . Blocks until data is available.
 
    For unbuffered channels, blocks until a ``put!`` is performed by a different task.
 
