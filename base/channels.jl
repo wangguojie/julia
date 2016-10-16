@@ -8,16 +8,16 @@ type Channel{T} <: AbstractChannel
     state::Symbol
 
     data::Array{T,1}
-    sz_max::UInt            # maximum size of channel
+    sz_max::Int            # maximum size of channel
 
     # Used when sz_max == 0, i.e., an unbuffered channel.
     takers::Array{Condition}
 
     function Channel(sz::Float64)
         if sz == Inf
-            Channel{T}(typemax(UInt))
+            Channel{T}(typemax(Int))
         else
-            Channel{T}(convert(UInt, sz))
+            Channel{T}(convert(Int, sz))
         end
     end
     function Channel(sz::Integer)
@@ -32,9 +32,7 @@ Channel(sz) = Channel{Any}(sz)
 
 closed_exception() = InvalidStateException("Channel is closed.", :closed)
 
-const UNBUFFERED_CHANNEL = Type{Val{false}}
-const BUFFERED_CHANNEL = Type{Val{true}}
-isbuffered(c::Channel) = c.sz_max==0 ? Val{false} : Val{true}
+isbuffered(c::Channel) = c.sz_max==0 ? false : true
 
 """
     close(c::Channel)
@@ -66,10 +64,10 @@ task.
 """
 function put!(c::Channel, v)
     !isopen(c) && throw(closed_exception())
-    put!(c,v,isbuffered(c))
+    isbuffered(c) ? put_buffered(c,v) : put_unbuffered(c,v)
 end
 
-function put!(c::Channel, v, ::BUFFERED_CHANNEL)
+function put_buffered(c::Channel, v)
     while length(c.data) == c.sz_max
         wait(c.cond_put)
     end
@@ -78,8 +76,7 @@ function put!(c::Channel, v, ::BUFFERED_CHANNEL)
     v
 end
 
-# 0-sized channel
-function put!(c::Channel, v, ::UNBUFFERED_CHANNEL)
+function put_unbuffered(c::Channel, v)
     while length(c.takers) == 0
         notify(c.cond_take, nothing, true, false)  # Required to handle wait() on 0-sized channels
         wait(c.cond_put)
@@ -97,12 +94,12 @@ push!(c::Channel, v) = put!(c, v)
 Waits for and gets the first available item from the channel. Does not
 remove the item. `fetch` is unsupported on an unbuffered (0-size) channel.
 """
-fetch(c::Channel) = fetch(c, isbuffered(c))
-function fetch(c::Channel, ::BUFFERED_CHANNEL)
+fetch(c::Channel) = isbuffered(c) ? fetch_buffered(c) : fetch_unbuffered(c)
+function fetch_buffered(c::Channel)
     wait(c)
     c.data[1]
 end
-fetch(c::Channel, ::UNBUFFERED_CHANNEL) = throw(ErrorException("`fetch` is not supported on an unbuffered Channel."))
+fetch_unbuffered(c::Channel) = throw(ErrorException("`fetch` is not supported on an unbuffered Channel."))
 
 
 """
@@ -113,8 +110,8 @@ Removes and returns a value from a `Channel`. Blocks till data is available.
 For unbuffered channels, blocks until a `put!` is performed by a different
 task.
 """
-take!(c::Channel) = take!(c, isbuffered(c))
-function take!(c::Channel, ::BUFFERED_CHANNEL)
+take!(c::Channel) = isbuffered(c) ? take_buffered(c) : take_unbuffered(c)
+function take_buffered(c::Channel)
     wait(c)
     v = shift!(c.data)
     notify(c.cond_put, nothing, false, false) # notify only one, since only one slot has become available for a put!.
@@ -124,7 +121,7 @@ end
 shift!(c::Channel) = take!(c)
 
 # 0-size channel
-function take!(c::Channel, ::UNBUFFERED_CHANNEL)
+function take_unbuffered(c::Channel)
     !isopen(c) && throw(closed_exception())
     cond_taker = Condition()
     push!(c.takers, cond_taker)
@@ -150,9 +147,8 @@ immediately, does not block.
 For unbuffered channels returns `true` if there are tasks waiting
 on a `put!`.
 """
-isready(c::Channel) = n_avail(c, isbuffered(c)) > 0
-n_avail(c::Channel, ::BUFFERED_CHANNEL) = length(c.data)
-n_avail(c::Channel, ::UNBUFFERED_CHANNEL) = n_waiters(c.cond_put)
+isready(c::Channel) = n_avail(c) > 0
+n_avail(c::Channel) = isbuffered(c) ? length(c.data) : n_waiters(c.cond_put)
 
 function wait(c::Channel)
     while !isready(c)
@@ -170,7 +166,7 @@ end
 
 eltype{T}(::Type{Channel{T}}) = T
 
-show(io::IO, c::Channel) = print(io, "$(typeof(c))(sz_max:$(c.sz_max),sz_curr:$(n_avail(c, isbuffered(c))))")
+show(io::IO, c::Channel) = print(io, "$(typeof(c))(sz_max:$(c.sz_max),sz_curr:$(n_avail(c)))")
 
 start{T}(c::Channel{T}) = Ref{Nullable{T}}()
 function done(c::Channel, state::Ref)
