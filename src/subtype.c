@@ -119,8 +119,9 @@ static void statestack_pop(jl_unionstate_t *st)
 static int subtype(jl_value_t *x, jl_value_t *y, jl_stenv_t *e, int param);
 
 // compare the current component of `u` to `t`. `R==1` means `u` came from the right side.
-static int subtype_union(jl_value_t *t, jl_uniontype_t *u, jl_stenv_t *e, int8_t R, jl_unionstate_t *state, int param)
+static int subtype_union(jl_value_t *t, jl_uniontype_t *u, jl_stenv_t *e, int8_t R, int param)
 {
+    jl_unionstate_t *state = R ? &e->Runions : &e->Lunions;
     if (state->depth >= state->stacksize) {
         state->more = 1;
         return 1;
@@ -135,10 +136,10 @@ static int subtype_union(jl_value_t *t, jl_uniontype_t *u, jl_stenv_t *e, int8_t
 static int subtype_ufirst(jl_value_t *x, jl_value_t *y, jl_stenv_t *e)
 {
     if (jl_is_uniontype(x) && jl_is_typevar(y))
-        return subtype_union(y, x, e, 0, &e->Lunions, 0);
+        return subtype_union(y, x, e, 0, 0);
     if (jl_is_typevar(x) && jl_is_uniontype(y))
         return (x == ((jl_uniontype_t*)y)->a || x == ((jl_uniontype_t*)y)->b ||
-                subtype_union(x, y, e, 1, &e->Runions, 0));
+                subtype_union(x, y, e, 1, 0));
     return subtype(x, y, e, 0);
 }
 
@@ -439,12 +440,12 @@ static int subtype(jl_value_t *x, jl_value_t *y, jl_stenv_t *e, int param)
             return 1;
         if (jl_is_unionall(x))
             return subtype_unionall(y, (jl_unionall_t*)x, e, 0, param);
-        return subtype_union(x, y, e, 1, &e->Runions, param);
+        return subtype_union(x, y, e, 1, param);
     }
     if (jl_is_uniontype(x)) {
         if (jl_is_unionall(y))
             return subtype_unionall(x, (jl_unionall_t*)y, e, 1, param);
-        return subtype_union(y, x, e, 0, &e->Lunions, param);
+        return subtype_union(y, x, e, 0, param);
     }
     if (jl_is_unionall(y)) {
         if (x == y && !(e->envidx < e->envsz))
